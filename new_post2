@@ -1,0 +1,117 @@
+#!/usr/bin/env bash
+
+source /Users/Francisco/Bin/source/blogFunctions.sh
+source /Users/Francisco/Bin/source/blogVariables.sh
+
+: << "END"
+July 2, 2019.
+Use long git messages. Save often!
+END
+
+if [ $cmdarg -lt 1 ]; then
+    printf "usage: new_post [-n] [-u] [-b] [-t] [-e] [-p] [-i] [-c]\n"
+    printf "\ncreate a newpost: -n\nupload to github: -u\nbuild and copy site: -b\ntest site: -t\nedit latest post: -e\ntoggle latest published: -p [t/F]\n"
+    exit
+else
+    if [ -d /Volumes/RAMDisk ]; then
+        printf "${BLUE}Checking for RAMDisk: ${NOCOLOR}"
+        echo -e $FOUND
+    else
+        echo "Creating RAMDisk"
+        diskutil erasevolume HFS+ RAMDisk `hdiutil attach -nomount ram://2048`
+    fi
+    
+    if [ -e $ram_disk/recent.posts ]; then
+        printf "${BLUE}Checking for recent posts: ${NOCOLOR}"
+        echo -e $FOUND
+    else
+        printf "${GREEN}Updating Hexo posts list${NOCOLOR}\n"
+        hexo list post >${ram_disk}/recent.posts
+        sleep .5
+    fi
+    
+    case $1 in
+        -n)
+            printf "${BLUE}Creating new post.${NOCOLOR}\n"
+            sleep 2
+            blogMenu
+            blogPost
+            #blogDraft
+            #latest_post="$(grep -lR `date "+%Y-%m-%d"` /Users/Francisco/GitHub/Espinz/public/myblog/source/_posts/ | head -n 1)"
+            #findNouns
+            #cd $blog_images
+            mkSyms
+            python ~/Bin/Example --image 
+            #&& Python ~/Bin/Example --watermark && Python ~/Bin/Example --imageformat
+            #findNouns
+            cleanImages
+            #python ~/Bin/Example --imageformat
+            blogBuild
+            blogTest
+            read -r -p "Would you like to upload the post? " answer
+            answer=${answer,,}
+            if [ $answer == 'y' ]; then
+                blogPush
+            else
+                exit
+            fi
+        ;;
+        -b)
+            printf "${BLUE}Building blog.${NOCOLOR}\n"
+            blogBuild
+        ;;
+        -u)
+            printf "Uploading to gitHub\n"
+            sleep .05
+            blogPush
+        ;;
+        -t)
+            printf "${RED}Testing development site now.${NOCOLOR}\n"
+            sleep 1
+            #blogMenu
+            #blogPost
+            #blogDraft
+            #latest_post="$(grep -lR `date "+%Y-%m-%d"` /Users/Francisco/GitHub/Espinz/public/myblog/source/_posts/ | head -n 1)"
+            #findNouns
+            #findNouns
+            #cleanImages
+            #blogBuild
+            blogTest
+        ;;
+        -e)
+            printf "Editing latest post.\n"
+            sleep .05
+            mkSyms
+            cd $blog_home && vim latestPost.md
+        ;;
+        -p)
+            if [ $2 == "t" ]; then
+                printf "Post toggled to true.\n"
+                sleep .05
+                sed -i '' -e s'/published: false/published: true/g' $latest_post
+            else
+                printf "Post toggled to false.\n"
+                sed -i '' -e s'/published: true/published: false/g' $latest_post
+            fi
+        ;;
+        -i)
+            findNouns
+        ;;
+        -c)
+            echo -e "${BLUE}Starting clean up${NOCOLOR}"
+            cleanImages
+        ;;
+        -d)
+            blogDraft
+        ;;
+        -x)
+            blogBackup
+        ;;
+        -g)
+        echo "Create new gist"
+        ;;
+        *)
+            exit
+        ;;
+    esac
+fi
